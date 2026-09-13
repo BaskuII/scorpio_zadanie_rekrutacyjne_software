@@ -1,42 +1,69 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
+
 project(scorpio_zadanie_rekrutacyjne_software)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-# find_package(cv_bridge REQUIRED) # Example of importing cv_bridge
 
-include_directories(include)
 
-# Echo node component
-add_library(echoNode SHARED src/echo_node.cpp)
-ament_target_dependencies(echoNode
-  rclcpp
-  rclcpp_components
-  std_msgs
-  geometry_msgs
-  sensor_msgs
-  # cv_bridge
+# Exercise library
+add_library(backend SHARED
+  src/backend/motor.cpp
+  src/backend/basic_tester.cpp
+  src/backend/ros_interface.cpp
 )
-rclcpp_components_register_node(echoNode PLUGIN "example::EchoNode" EXECUTABLE echo)
+target_include_directories(backend PUBLIC
+  include/backend_interface/
+  include/backend/
+)
+ament_target_dependencies(backend geometry_msgs rclcpp rclcpp_components std_msgs)
+rclcpp_components_register_nodes(backend "backend::RosInterface")
 
-# Install libraries
-install(TARGETS
-  echoNode
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
+
+# Solution library
+option(REFERENCE_SOLUTION "Build the maintainers' reference solution from reference_solution/ instead of src/solution/" OFF)
+if(REFERENCE_SOLUTION)
+  file(GLOB solution_SRC CONFIGURE_DEPENDS "reference_solution/*.cpp")
+  set(solution_INCLUDE reference_solution/)
+else()
+  file(GLOB solution_SRC CONFIGURE_DEPENDS "src/solution/*.cpp")
+  set(solution_INCLUDE include/solution/)
+endif()
+add_library(solution SHARED ${solution_SRC})
+target_include_directories(solution PRIVATE
+  ${solution_INCLUDE}
+  include/backend_interface/
+)
+ament_target_dependencies(solution geometry_msgs rclcpp rclcpp_components std_msgs)
+rclcpp_components_register_nodes(solution "solution::Solution")
+
+
+install(TARGETS backend solution
+  DESTINATION lib
+)
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
-# Install config and launch files
-install(DIRECTORY
-  config
-  launch
-  DESTINATION share/${PROJECT_NAME}/
-)
+
+# Unit tests (run with `colcon test`, skip with `colcon build --cmake-args -DBUILD_TESTING=OFF`)
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  file(GLOB test_SRC CONFIGURE_DEPENDS "unit_tests/test_*.cpp")
+  ament_add_gtest(tests ${test_SRC}
+    src/backend/motor.cpp
+    src/backend/basic_tester.cpp
+  )
+  target_include_directories(tests PRIVATE
+    include/backend_interface/
+    include/backend/
+  )
+endif()
 
 ament_package()
