@@ -22,7 +22,13 @@ target_include_directories(backend PUBLIC
   include/backend_interface/
   include/backend/
 )
-ament_target_dependencies(backend geometry_msgs rclcpp rclcpp_components std_msgs)
+#ament_target_dependencies(backend geometry_msgs rclcpp rclcpp_components std_msgs)
+target_link_libraries(backend PUBLIC
+  geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  rclcpp::rclcpp
+  rclcpp_components::component
+)
 rclcpp_components_register_nodes(backend "backend::RosInterface")
 
 
@@ -40,7 +46,15 @@ target_include_directories(solution PRIVATE
   ${solution_INCLUDE}
   include/backend_interface/
 )
-ament_target_dependencies(solution geometry_msgs rclcpp rclcpp_components std_msgs)
+#ament_target_dependencies(solution geometry_msgs rclcpp rclcpp_components std_msgs)
+
+target_link_libraries(solution PUBLIC
+  geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  rclcpp::rclcpp
+  rclcpp_components::component
+)
+
 rclcpp_components_register_nodes(solution "solution::Solution")
 
 
